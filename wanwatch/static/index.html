@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+:root{
+  --bg:#e4e9ec; --panel:#f8fafb; --ink:#15283a; --muted:#5b6b7a; --line:#c6cfd6; --faint:#dde3e8;
+  --ok:#127a5a; --warn:#b37000; --down:#c23b2e; --unk:#7c8894; --route:#2c57cf;
+  --display:"Bahnschrift","DIN Alternate","DIN 2014","Roboto Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#10171e; --panel:#18222c; --ink:#e2e9ef; --muted:#93a2b0; --line:#2e3c49; --faint:#22303c;
+  --ok:#36b58b; --warn:#e0a232; --down:#ec6a5c; --unk:#76828e; --route:#7196ff;}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--route)}
+:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:baseline;justify-content:space-between;padding:22px clamp(16px,4vw,40px) 6px}
+h1{font:600 22px/1.2 var(--display);margin:0;letter-spacing:.01em}
+#fw{color:var(--muted);font-size:13px}
+#headline{font:500 clamp(24px,3.4vw,38px)/1.15 var(--display);margin:4px clamp(16px,4vw,40px) 0;max-width:30ch}
+#subline{margin:6px clamp(16px,4vw,40px) 0;color:var(--muted);max-width:75ch}
+main{padding:10px clamp(16px,4vw,40px) 40px;display:grid;gap:18px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
+h2{font:600 16px/1.3 var(--display);margin:0 0 12px;letter-spacing:.02em}
+
+/* circuit diagram: the one bold element */
+#circuit{padding:8px 8px 4px;border-radius:10px}
+#circuit svg{width:100%;height:auto;display:block}
+.node{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+.nodelabel{font:600 16px var(--display);fill:var(--ink)}
+.nodesub{font:12px var(--body);fill:var(--muted)}
+.wire{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke .4s}
+.wire.healthy{stroke:var(--ok)} .wire.degraded{stroke:var(--warn)} .wire.down{stroke:var(--down);stroke-dasharray:2 16} .wire.unknown{stroke:var(--unk);stroke-dasharray:2 10}
+.flow{fill:none;stroke:var(--panel);stroke-width:3;stroke-dasharray:6 22;opacity:0;stroke-linecap:round}
+.flow.on{opacity:.9;animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-28}}
+@media (prefers-reduced-motion:reduce){.flow.on{animation:none;stroke-dasharray:none;opacity:.35}}
+.wname{font:600 20px var(--display);fill:var(--ink)}
+.wstate{font:600 14px var(--display)}
+.wstate.healthy{fill:var(--ok)} .wstate.degraded{fill:var(--warn)} .wstate.down{fill:var(--down)} .wstate.unknown{fill:var(--unk)}
+.wmetric{font:14px var(--body);fill:var(--ink)}
+.wmetric .bad{fill:var(--down);font-weight:600}
+.wsub{font:12px var(--body);fill:var(--muted)}
+
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
+.linkhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.avail{font:600 30px/1 var(--display)}
+.avail small{font:13px var(--body);color:var(--muted);margin-left:6px}
+.ribbon{display:flex;height:22px;margin:12px 0 4px;border-radius:3px;overflow:hidden;background:var(--faint)}
+.ribbon i{flex:1;min-width:0}
+.ribbon .healthy{background:var(--ok)} .ribbon .degraded{background:var(--warn)} .ribbon .down{background:var(--down)} .ribbon .unknown{background:var(--unk)}
+.axis{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.chart{width:100%;height:120px;margin-top:10px;display:block}
+.chart .lat{fill:none;stroke:var(--ink);stroke-width:1.6}
+.chart .thr{stroke:var(--down);stroke-dasharray:4 4;stroke-width:1}
+.chart text{font:11px var(--body);fill:var(--muted)}
+.legend{font-size:12px;color:var(--muted)}
+
+.split{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
+@media (max-width:900px){.split{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:7px 8px;border-bottom:1px solid var(--faint);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:13px}
+.sev{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px}
+.sev.critical{background:var(--down)} .sev.warning{background:var(--warn)} .sev.info{background:var(--ok)}
+.scroll{max-height:420px;overflow:auto}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button,input{font:inherit;color:inherit}
+button{background:var(--ink);color:var(--panel);border:0;border-radius:4px;padding:7px 14px;cursor:pointer}
+button.quiet{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:default}
+input[type=date]{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:5px;display:none;max-width:90vw}
+.empty{color:var(--muted)}
+#conn{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>{{TITLE}}</h1>
+  <div id="fw" class="num">Connecting to the monitor…</div>
+</header>
+<p id="headline">Checking both WAN links</p>
+<p id="subline"></p>
+
+<main>
+  <div id="circuit" aria-label="WAN link diagram"><svg id="diagram" viewBox="0 0 1000 300" role="img"></svg></div>
+
+  <div class="links" id="links"></div>
+
+  <div class="split">
+    <section>
+      <h2>Alerts and changes</h2>
+      <div class="scroll"><table><thead><tr><th style="width:150px">When</th><th>What happened</th></tr></thead><tbody id="events"></tbody></table></div>
+    </section>
+    <section>
+      <h2>Daily SLA reports</h2>
+      <div class="row">
+        <input type="date" id="rday" aria-label="Report date">
+        <button id="rgen">Build report</button>
+        <button id="talert" class="quiet">Send test alert</button>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Day</th><th>Result</th><th></th></tr></thead><tbody id="reports"></tbody></table></div>
+      <p id="conn"></p>
+    </section>
+  </div>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const STATE_WORD = {healthy:"Healthy", degraded:"Degraded", down:"Down", unknown:"No data"};
+let status = null, history = null;
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v, d=0, u="") => v == null ? "–" : Number(v).toFixed(d) + u;
+const bps = v => v == null ? "–" : v >= 1e9 ? (v/1e9).toFixed(2)+" Gb/s" : v >= 1e6 ? (v/1e6).toFixed(1)+" Mb/s" : (v/1e3).toFixed(0)+" kb/s";
+const ago = ts => { if(!ts) return ""; const s = Math.max(0, Date.now()/1000 - ts);
+  return s < 90 ? `${Math.round(s)}s` : s < 5400 ? `${Math.round(s/60)} min` : s < 172800 ? `${(s/3600).toFixed(1)} h` : `${Math.round(s/86400)} days`; };
+const when = ts => new Date(ts*1000).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",4500); }
+async function api(path, opts){ const r = await fetch(path, opts); if(!r.ok){ let m=`HTTP ${r.status}`; try{m=(await r.json()).detail||m}catch{} throw new Error(m);} return r.json(); }
+
+function headline(s){
+  const L = s.links, byName = i => L.find(l=>l.interface===i)?.name || i;
+  const route = s.default_route ? s.default_route.map(byName).join(" and ") : null;
+  const bad = L.filter(l=>l.state==="down"), deg = L.filter(l=>l.state==="degraded");
+  switch(s.overall){
+    case "unknown": return ["The firewall isn't answering", `The FortiGate API has not responded since ${s.poll.last_ok ? when(s.poll.last_ok) : "the service started"}. ${s.firewall.last_error||""}`];
+    case "outage": return ["Internet is down on every link", "Both WAN links are failing their health checks."];
+    case "failover": return [`Running on backup: ${L.filter(l=>l.role==="secondary"&&l.state!=="down").map(l=>l.name).join(", ")}`, `${bad.map(l=>l.name).join(", ")} has been down for ${ago(bad[0]?.since)}.`];
+    case "impaired": return [[...bad.map(l=>`${l.name} is down`), ...deg.map(l=>`${l.name} is degraded`)].join(", "),
+      deg.concat(bad).map(l=>`${l.name}: ${l.reasons.join("; ")||"health probes failing"}, since ${ago(l.since)} ago.`).join(" ")];
+    default: return ["Both links are healthy", route ? `Default route via ${route}.` : ""];
+  }
+}
+
+function drawDiagram(s){
+  const svg = $("#diagram"), n = s.links.length, H = 300, gap = H/(n+1);
+  let out = `<rect class="node" x="20" y="${H/2-52}" width="170" height="104" rx="6"/>
+    <text class="nodelabel" x="105" y="${H/2-8}" text-anchor="middle">${esc(s.firewall.hostname||"FortiGate")}</text>
+    <text class="nodesub" x="105" y="${H/2+16}" text-anchor="middle">${esc(s.firewall.firmware||"")}</text>
+    <ellipse class="node" cx="905" cy="${H/2}" rx="78" ry="52"/>
+    <text class="nodelabel" x="905" y="${H/2+6}" text-anchor="middle">Internet</text>`;
+  s.links.forEach((l,i)=>{
+    const y = gap*(i+1), st = l.state, t = l.thresholds;
+    const d = `M190 ${H/2} C 290 ${H/2}, 290 ${y}, 380 ${y} L 700 ${y} C 790 ${y}, 790 ${H/2}, 828 ${H/2}`;
+    const m = (v,lim,dec,u) => `<tspan class="${v!=null&&v>lim?"bad":""}">${fmt(v,dec,u)}</tspan>`;
+    const metrics = st==="down" ? `<tspan class="bad">no response to health probes</tspan>`
+      : `${m(l.latency_ms,t.latency_ms,0," ms")} latency   ${m(l.jitter_ms,t.jitter_ms,1," ms")} jitter   ${m(l.loss_pct,t.packet_loss_pct,1,"%")} loss`;
+    out += `<path class="wire ${st}" d="${d}"/><path class="flow ${l.carries_default_route&&st!=="down"?"on":""}" d="${d}"/>
+      <text class="wname" x="400" y="${y-34}">${esc(l.name)}</text>
+      <text class="wstate ${st}" x="680" y="${y-34}" text-anchor="end">${STATE_WORD[st]||st}${l.pending?` (checking ${l.pending.state})`:""}</text>
+      <text class="wmetric num" x="400" y="${y+30}" xml:space="preserve">${metrics}</text>
+      <text class="wsub" x="400" y="${y-15}">${esc(l.interface)}, ${l.role}${l.carries_default_route?", carrying the default route":""}${l.since?`, for ${ago(l.since)}`:""}</text>`;
+  });
+  svg.innerHTML = out;
+}
+
+function linkCard(l){
+  const h = history?.series?.[l.interface] || [], av = history?.availability?.[l.interface];
+  const target = status?.sla_target_pct ?? 99.5;
+  const lat = h.map(p=>p.latency).filter(v=>v!=null), max = Math.max(l.thresholds.latency_ms*1.2, ...lat, 10);
+  const W=600, Hh=110, x = i => i*(W/Math.max(1,h.length-1)), y = v => Hh-6 - (v/max)*(Hh-18);
+  let path="", pen=false;
+  h.forEach((p,i)=>{ if(p.latency==null){pen=false;return;} path += `${pen?"L":"M"}${x(i).toFixed(1)} ${y(p.latency).toFixed(1)} `; pen=true; });
+  const ty = y(l.thresholds.latency_ms);
+  return `<section>
+    <div class="linkhead"><h2>${esc(l.name)} <span class="legend">${esc(l.interface)}</span></h2>
+      <div class="avail num" title="Share of polls in the last 24 hours where the link was up">${av==null?"–":av.toFixed(2)+"%"}<small>up, last 24 h (target ${target}%)</small></div></div>
+    <div class="ribbon" aria-label="24-hour state timeline">${h.map(p=>`<i class="${p.state||""}" title="${when(p.t)}: ${STATE_WORD[p.state]||"not monitored"}"></i>`).join("")}</div>
+    <div class="axis"><span>24 h ago</span><span>12 h</span><span>now</span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-label="Latency, last 24 hours">
+      <line class="thr" x1="0" x2="${W}" y1="${ty}" y2="${ty}"/><path class="lat" d="${path}" vector-effect="non-scaling-stroke"/></svg>
+    <div class="legend num">Latency over 24 h; dashed line is the ${l.thresholds.latency_ms} ms threshold. Now: ↓ ${bps(l.rx_bps)}  ↑ ${bps(l.tx_bps)}${l.sla_met===false?"; FortiGate reports its SLA as not met":""}</div>
+  </section>`;
+}
+
+function render(){
+  if(!status) return;
+  const [h, sub] = headline(status);
+  $("#headline").textContent = h; $("#subline").textContent = sub;
+  document.title = `${h} | ${status.title}`;
+  const fw = status.firewall;
+  $("#fw").textContent = fw.reachable===false ? "Firewall API unreachable" :
+    `Polling every ${status.poll.interval_s}s, last ${status.poll.last_ok?ago(status.poll.last_ok)+" ago":"not yet"}, source ${fw.source}${fw.health_check?` (${fw.health_check})`:""}`;
+  drawDiagram(status);
+  $("#links").innerHTML = status.links.map(linkCard).join("");
+}
+
+async function loadHistory(){ try{ history = await api("/api/history?hours=24&points=288"); render(); }catch(e){ console.warn(e); } }
+async function loadEvents(){
+  const ev = await api("/api/events?limit=150");
+  $("#events").innerHTML = ev.length ? ev.map(e=>`<tr><td class="num">${when(e.ts)}</td><td><span class="sev ${e.severity}"></span>${esc(e.message)}${e.notified===-1?" <em class='legend'>(alert delivery failed)</em>":""}</td></tr>`).join("")
+    : `<tr><td colspan="2" class="empty">Nothing yet. Link changes and failovers will appear here.</td></tr>`;
+}
+async function loadReports(){
+  const r = await api("/api/reports");
+  $("#reports").innerHTML = r.length ? r.map(x=>`<tr><td class="num">${x.day}</td><td class="num">${esc(x.summary)}</td>
+    <td><a href="/reports/${x.day}.html" target="_blank" rel="noopener">View</a> <a href="/reports/${x.day}.csv">CSV</a></td></tr>`).join("")
+    : `<tr><td colspan="3" class="empty">Reports are built automatically each night. Pick a date and build one now to preview.</td></tr>`;
+}
+
+$("#rgen").onclick = async e => { const b=e.target; b.disabled=true;
+  try{ const d=$("#rday").value; const r=await api(`/api/reports/generate${d?`?day=${d}`:""}`,{method:"POST"}); toast(`Report built for ${r.day}`); loadReports(); }
+  catch(err){ toast(`Report failed: ${err.message}`);} finally{ b.disabled=false; } };
+$("#talert").onclick = async e => { const b=e.target; b.disabled=true;
+  try{ await api("/api/alerts/test",{method:"POST"}); toast("Test alert sent"); }catch(err){ toast(err.message); } finally{ b.disabled=false; } };
+{ const d=new Date(Date.now()-864e5); $("#rday").value = d.toISOString().slice(0,10); }
+
+function connect(){
+  const es = new EventSource("/api/stream");
+  es.addEventListener("status", m => { status = JSON.parse(m.data); render(); $("#conn").textContent=""; });
+  es.addEventListener("event", () => { loadEvents(); });
+  es.onerror = () => { $("#conn").textContent = "Live updates paused, reconnecting…"; };
+}
+api("/api/status").then(s=>{status=s; render();}).catch(e=>toast(e.message));
+loadHistory(); loadEvents(); loadReports(); connect();
+setInterval(loadHistory, 60000);
+setInterval(()=>{ if(status) render(); }, 15000); // keep "x ago" fresh
+</script>
+</body>
+</html>

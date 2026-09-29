@@ -1,0 +1,83 @@
+# WANWatch configuration. Copy to config.yaml and edit.
+# ${VAR} and ${VAR:-default} are read from the environment - keep secrets there.
+title: WANWatch
+
+fortigate:
+  base_url: https://192.168.1.99          # management IP/FQDN (add :port if admin HTTPS isn't 443)
+  api_token: ${FGT_API_TOKEN}             # REST API admin token (read-only profile)
+  verify_tls: true                        # true | false | path/to/ca-bundle.pem
+  timeout_s: 8
+  vdom: ""                                # e.g. root, when multi-VDOM is enabled
+  source: sdwan                           # sdwan = SD-WAN performance SLA | link-monitor
+  health_check: ""                        # SD-WAN health-check name; empty = first one covering the links
+  track_default_route: true               # alert when the active default route moves between links
+
+default_thresholds:                       # a link is DEGRADED when any of these is exceeded
+  latency_ms: 150
+  jitter_ms: 30
+  packet_loss_pct: 2
+
+links:
+  - name: Primary ISP
+    interface: wan1
+    role: primary
+  - name: Backup ISP
+    interface: wan2
+    role: secondary
+    thresholds: { latency_ms: 250 }       # per-link override
+
+detection:
+  poll_interval_s: 10
+  down_after: 2        # consecutive failing polls before a link is declared DOWN
+  degrade_after: 3     # consecutive polls over threshold before DEGRADED
+  recover_after: 5     # consecutive good polls before recovery
+  unreachable_after: 3 # consecutive API failures before "firewall unreachable"
+
+alerts:
+  cooldown_s: 300
+  min_severity: warning                   # info | warning | critical (recoveries always follow a sent problem alert)
+  email:
+    enabled: false
+    host: smtp.office365.com
+    port: 587
+    starttls: true
+    ssl: false
+    username: alerts@example.com
+    password: ${SMTP_PASSWORD}
+    sender: alerts@example.com
+    recipients: [noc@example.com]
+  webhooks: []
+  #  - kind: teams      # Teams "Workflows" incoming webhook URL
+  #    url: ${TEAMS_WEBHOOK_URL}
+  #  - kind: slack
+  #    url: ${SLACK_WEBHOOK_URL}
+  #  - kind: generic    # plain JSON POST (PagerDuty/Opsgenie bridges, n8n, etc.)
+  #    url: https://example.com/hook
+
+reports:
+  enabled: true
+  time: "00:10"                           # build yesterday's report at this local time
+  timezone: Africa/Lagos
+  sla_target_pct: 99.5
+  directory: reports
+  email: true                             # email the report when alerts.email is enabled
+  keep_days: 400
+
+web:
+  host: 0.0.0.0
+  port: 8080
+  username: admin
+  password_hash: ""                       # python -m wanwatch hash-password
+  public_metrics: false
+  tls_cert: ""                            # optional: serve the dashboard over HTTPS
+  tls_key: ""
+
+storage:
+  path: data/wanwatch.db
+  retention_days: 90
+
+logging:
+  level: INFO
+  file: logs/wanwatch.log
+  max_bytes: 5000000
+  backups: 5

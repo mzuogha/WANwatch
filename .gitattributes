@@ -1,5 +1,6 @@
-# Windows batch files must keep CRLF line endings (stored as-is, never converted)
-*.cmd -text
-*.bat -text
-# PowerShell scripts: CRLF on checkout
+# Windows scripts keep CRLF, Linux scripts keep LF
+*.cmd text eol=crlf
+*.bat text eol=crlf
 *.ps1 text eol=crlf
+*.sh  text eol=lf
+*.service text eol=lf

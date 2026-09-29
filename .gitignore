@@ -1,21 +1,24 @@
-# Local database & logs
-monitor.db
-monitor.db-journal
-monitor.db-wal
-monitor.db-shm
+# Runtime data (created next to config.yaml)
+data/
+logs/
+reports/
+*.db
 *.db-wal
 *.db-shm
-test-*.db
-*.log
 
-# Operating System Files
+# Local configuration and secrets - never commit these
+config.yaml
+wanwatch.env
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# OS files
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Environment / local overrides
-.env
-
-# Written by install.ps1 on the target PC
-install.json
-wanmon.cmd
